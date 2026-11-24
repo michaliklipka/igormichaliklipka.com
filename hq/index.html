@@ -94,6 +94,18 @@ tr:last-child td { border-bottom: 1px solid var(--line); }
 .barlabels .sm { display: none; }
 .barlabels .yr { display: block; font-size: 10px; color: var(--mute); font-weight: 400; }
 .bars { gap: 6px; } .barlabels { gap: 6px; }
+.chartbar { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: -4px 0 18px; font-size: 13px; }
+.seg-ctl { display: flex; border: 1px solid var(--fg); }
+.seg-ctl button { padding: 5px 10px; color: var(--mute); }
+.seg-ctl button + button { border-left: 1px solid var(--fg); }
+.seg-ctl button.on { background: var(--fg); color: var(--bg); }
+.linechart { position: relative; height: 220px; border-bottom: 1px solid var(--fg); }
+.linechart svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.linechart .dot { position: absolute; width: 10px; height: 10px; margin: 0 0 -5px -5px; border-radius: 50%; background: var(--link); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--link); }
+.linechart .tip { position: absolute; transform: translateX(-50%); font-size: 12px; font-weight: 700; background: var(--bg); padding: 1px 4px; border: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.linechart .tip.l { transform: none; } .linechart .tip.r { transform: translateX(-100%); }
+.linechart .hit { position: absolute; inset: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.linechart .hit .bar { height: 100%; }
 .legend { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--mute); margin-top: 14px; }
 .legend i { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; }
 
@@ -122,7 +134,8 @@ body.locked footer { max-width: 760px; }
   .rows li > :first-child { grid-column: 1 / -1; font-size: 12px; }
   .hide-sm { display: none; }
   .bars { height: 160px; gap: 3px; } .barlabels { gap: 3px; font-size: 11px; }
-  .barlabels .lg { display: none; } .barlabels .sm { display: inline; }
+  .barlabels.dense .lg { display: none; } .barlabels.dense .sm { display: inline; }
+  .barlabels { font-size: 10px; } .linechart { height: 160px; }
   .bars { overflow-x: clip; } .bar .t { visibility: hidden; } .bar.sel .t { visibility: visible; white-space: nowrap; }
   .bar .t { font-size: 10px; }
 }
@@ -202,6 +215,10 @@ body.locked footer { max-width: 760px; }
   const addMonth = (m, k) => { let [y, mm] = m.split("-").map(Number); mm += k; while (mm > 12) { mm -= 12; y++; } while (mm < 1) { mm += 12; y--; } return `${y}-${String(mm).padStart(2,"0")}`; };
 
   let D, sel;
+  // chart prefs (this device only): range = "YYYY" | "ALL", view = "bars" | "line"
+  const pref = (() => { try { return JSON.parse(localStorage.getItem("hq.chart") || "{}"); } catch { return {}; } })();
+  let range = null, view = pref.view === "line" ? "line" : "bars";
+  const savePref = () => { try { localStorage.setItem("hq.chart", JSON.stringify({ view })); } catch {} };
   function start(data) {
     D = data;
     document.body.classList.remove("locked"); $("#lock").hidden = true; $("#app").hidden = false; $("#logout").hidden = false;
@@ -239,7 +256,19 @@ body.locked footer { max-width: 760px; }
     const withData = M.all.filter(m => M.per(m).made > 0).length;
     const years = [...new Set(M.all.map(m => m.slice(0, 4)))].map(y => ({ y, sum: M.all.filter(m => m.startsWith(y)).reduce((a, m) => a + M.per(m).made, 0) }));
     const delta = prev.made ? Math.round((cur.made - prev.made) / prev.made * 100) : null;
-    const maxBar = Math.max(...M.all.map(m => M.per(m).made), 1);
+    const thisYear = t.slice(0, 4), yearsAll = [...new Set(M.all.map(m => m.slice(0, 4)))];
+    if (!range) range = thisYear;
+    const cm = range === "ALL" ? M.all
+      : Array.from({ length: range === thisYear ? Number(t.slice(5, 7)) : 12 }, (_, i) => `${range}-${String(i + 1).padStart(2, "0")}`);
+    const cv = cm.map(m => M.per(m).made);
+    const maxBar = Math.max(...cv, 1);
+    const rTotal = cv.reduce((a, b) => a + b, 0);
+    const firstData = cm.findIndex((m, i) => cv[i] > 0);
+    const rMonths = firstData < 0 ? 1 : cm.length - firstData;          // months since work started in this range
+    const bestI = cv.indexOf(Math.max(...cv));
+    const prevYearSame = range !== "ALL" && range === thisYear
+      ? cm.map(m => M.per(`${Number(range) - 1}${m.slice(4)}`).made).reduce((a, b) => a + b, 0) : 0;
+    const kfmt = v => v >= 1000 ? "$" + (v / 1000).toFixed(1).replace(/\.0$/, "") + "K" : money(v);
     const isNow = sel === ym(t);
 
     // per client, for the selected month and all time
@@ -281,19 +310,45 @@ body.locked footer { max-width: 760px; }
       </div>
 
       <h2>BY MONTH:</h2>
-      <div class="bars">${M.all.map(m => { const p = M.per(m), h = v => (v / maxBar * 100) + "%";
+      <div class="chartbar">
+        <div class="seg-ctl">${[...yearsAll, "ALL"].map(y => `<button class="rng ${y === range ? "on" : ""}" data-r="${y}">${y}</button>`).join("")}</div>
+        <div class="seg-ctl">${[["bars", "BARS"], ["line", "LINE"]].map(([v, l]) => `<button class="vw ${v === view ? "on" : ""}" data-v="${v}">${l}</button>`).join("")}</div>
+      </div>
+      ${view === "bars" ? `
+      <div class="bars">${cm.map(m => { const p = M.per(m), h = v => (v / maxBar * 100) + "%";
         return `<div class="bar ${m === sel ? "sel" : ""}" data-m="${m}" title="${monthName(m)}: ${money(p.made)}">
-          <span class="t">${p.made ? (p.made >= 1000 ? "$" + (p.made / 1000).toFixed(1).replace(/\.0$/, "") + "K" : money(p.made)) : ""}</span>
+          <span class="t">${p.made ? kfmt(p.made) : ""}</span>
           <span class="seg todo" style="height:${h(p.notInv)}"></span>
           <span class="seg unpaid" style="height:${h(p.unpaid)}"></span>
-          <span class="seg paid" style="height:${h(p.paid)}"></span></div>`; }).join("")}</div>
-      <div class="barlabels">${M.all.map((m, i) => `<span class="${m === sel ? "sel" : ""}"><span class="lg">${mon(m)}</span><span class="sm">${mon(m)[0]}</span>${i === 0 || m.endsWith("-01") ? `<span class="yr">${m.slice(2, 4)}</span>` : ""}</span>`).join("")}</div>
-      <div class="legend">
+          <span class="seg paid" style="height:${h(p.paid)}"></span></div>`; }).join("")}</div>` : (() => {
+        const n = cm.length, X = i => (i + 0.5) * 100, Y = v => 200 - v / maxBar * 170;
+        const pts = cv.map((v, i) => [X(i), Y(v)]);
+        const live = range === thisYear || (range === "ALL" && cm[n - 1] === ym(t));
+        const solid = live && n > 1 ? pts.slice(0, -1) : pts, tail = live && n > 1 ? pts.slice(-2) : [];
+        const d = a => a.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+        const area = d(pts) + ` L${X(n - 1)} 200 L${X(0)} 200 Z`;
+        const si = cm.indexOf(sel);
+        return `<div class="linechart">
+          <svg viewBox="0 0 ${n * 100} 200" preserveAspectRatio="none" aria-hidden="true">
+            <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--link)" stop-opacity=".18"/><stop offset="1" stop-color="var(--link)" stop-opacity="0"/></linearGradient></defs>
+            <path d="${area}" fill="url(#g)"/>
+            ${si >= 0 ? `<line x1="${X(si)}" y1="0" x2="${X(si)}" y2="200" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>` : ""}
+            <path d="${d(solid)}" fill="none" stroke="var(--link)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+            ${tail.length ? `<path d="${d(tail)}" fill="none" stroke="var(--link)" stroke-width="2" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>` : ""}
+          </svg>
+          ${si >= 0 ? `<span class="dot" style="left:${(si + 0.5) / n * 100}%;bottom:${cv[si] / maxBar * 85}%"></span>
+            <span class="tip ${si === 0 ? "l" : si === n - 1 ? "r" : ""}" style="left:${(si + 0.5) / n * 100}%;bottom:calc(${cv[si] / maxBar * 85}% + 12px)">${money(cv[si])}</span>` : ""}
+          <div class="hit">${cm.map(m => `<span class="bar" data-m="${m}" title="${monthName(m)}: ${money(M.per(m).made)}"></span>`).join("")}</div>
+        </div>`; })()}
+      <div class="barlabels ${cm.length > 12 ? "dense" : ""}">${cm.map((m, i) => `<span class="${m === sel ? "sel" : ""}"><span class="lg">${mon(m)}</span><span class="sm">${mon(m)[0]}</span>${range === "ALL" && (i === 0 || m.endsWith("-01")) ? `<span class="yr">${m.slice(2, 4)}</span>` : ""}</span>`).join("")}</div>
+      ${view === "bars" ? `<div class="legend">
         <span><i style="background:var(--bar)"></i>PAID</span>
         <span><i style="background:var(--bar2)"></i>UNPAID</span>
         <span><i style="background:repeating-linear-gradient(135deg,var(--bar2) 0 2px,transparent 2px 5px);border:1px solid var(--bar2)"></i>TO INVOICE</span>
-      </div>
-      <p class="small" style="margin-top:10px">${years.map(y => `<span class="mute">${y.y}${y.y === t.slice(0, 4) ? " YTD" : ""}</span> <b class="num">${money(y.sum)}</b>`).join(` <span class="mute">·</span> `)} <span class="mute">· ALL</span> <b class="num">${money(total)}</b> <span class="mute">· AVG</span> <b class="num">${money(total / Math.max(1, withData))}</b><span class="mute">/MO</span></p>
+      </div>` : ""}
+      <p class="small" style="margin-top:12px">${range === "ALL"
+        ? `${yearsAll.map(y => `<span class="mute">${y}${y === thisYear ? " YTD" : ""}</span> <b class="num">${money(M.all.filter(m => m.startsWith(y)).reduce((a, m) => a + M.per(m).made, 0))}</b>`).join(` <span class="mute">·</span> `)} <span class="mute">· ALL</span> <b class="num">${money(rTotal)}</b> <span class="mute">· AVG</span> <b class="num">${money(rTotal / rMonths)}</b><span class="mute">/MO</span>`
+        : `<span class="mute">${range}${range === thisYear ? " YTD" : ""}</span> <b class="num">${money(rTotal)}</b> <span class="mute">· AVG</span> <b class="num">${money(rTotal / rMonths)}</b><span class="mute">/MO</span>${rTotal ? ` <span class="mute">· BEST ${mon(cm[bestI])}</span> <b class="num">${kfmt(cv[bestI])}</b>` : ""}${prevYearSame ? ` <span class="mute">· VS ${Number(range) - 1} SAME PERIOD</span> <b class="num">${rTotal >= prevYearSame ? "+" : ""}${Math.round((rTotal - prevYearSame) / prevYearSame * 100)}%</b>` : ""}`}</p>
 
       <h2>NEEDS ACTION:</h2>
       <ul class="rows two">
@@ -347,8 +402,14 @@ body.locked footer { max-width: 760px; }
           <span class="r num">${money(i.amount)}<span class="sub ${i.open ? "due" : "ok"}">${i.open ? "UNPAID" : "PAID"}</span></span></li>`).join("")}</ul>
       </details>
     `;
-    $("#prev").onclick = () => { sel = addMonth(sel, -1); render(); };
-    $("#next").onclick = () => { sel = addMonth(sel, 1); render(); };
+    const follow = () => { if (range !== "ALL") range = sel.slice(0, 4); };
+    $("#prev").onclick = () => { sel = addMonth(sel, -1); follow(); render(); };
+    $("#next").onclick = () => { sel = addMonth(sel, 1); follow(); render(); };
+    document.querySelectorAll(".rng").forEach(b => b.onclick = () => {
+      range = b.dataset.r;
+      if (range !== "ALL" && sel.slice(0, 4) !== range) sel = range === thisYear ? ym(t) : `${range}-12`;
+      render(); });
+    document.querySelectorAll(".vw").forEach(b => b.onclick = () => { view = b.dataset.v; savePref(); render(); });
     document.querySelectorAll(".bar").forEach(b => b.onclick = () => { sel = b.dataset.m; render(); });
   }
 
