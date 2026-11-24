@@ -101,9 +101,11 @@ tr:last-child td { border-bottom: 1px solid var(--line); }
 .seg-ctl button.on { background: var(--fg); color: var(--bg); }
 .linechart { position: relative; height: 220px; border-bottom: 1px solid var(--fg); }
 .linechart svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.linechart .dot { position: absolute; width: 10px; height: 10px; margin: 0 0 -5px -5px; border-radius: 50%; background: var(--link); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--link); }
+.linechart .dot { position: absolute; width: 10px; height: 10px; margin: 0 0 -5px -5px; border-radius: 50%; background: var(--fg); border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--fg); }
 .linechart .tip { position: absolute; transform: translateX(-50%); font-size: 12px; font-weight: 700; background: var(--bg); padding: 1px 4px; border: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .linechart .tip.l { transform: none; } .linechart .tip.r { transform: translateX(-100%); }
+.linechart .vline { position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -.5px; background: var(--line); }
+.linechart { touch-action: pan-y; cursor: crosshair; user-select: none; -webkit-user-select: none; }
 .linechart .hit { position: absolute; inset: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 .linechart .hit .bar { height: 100%; }
 .legend { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--mute); margin-top: 14px; }
@@ -330,14 +332,12 @@ body.locked footer { max-width: 760px; }
         const si = cm.indexOf(sel);
         return `<div class="linechart">
           <svg viewBox="0 0 ${n * 100} 200" preserveAspectRatio="none" aria-hidden="true">
-            <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--link)" stop-opacity=".18"/><stop offset="1" stop-color="var(--link)" stop-opacity="0"/></linearGradient></defs>
+            <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--fg)" stop-opacity=".14"/><stop offset="1" stop-color="var(--fg)" stop-opacity="0"/></linearGradient></defs>
             <path d="${area}" fill="url(#g)"/>
-            ${si >= 0 ? `<line x1="${X(si)}" y1="0" x2="${X(si)}" y2="200" stroke="var(--line)" stroke-width="1" vector-effect="non-scaling-stroke"/>` : ""}
-            <path d="${d(solid)}" fill="none" stroke="var(--link)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
-            ${tail.length ? `<path d="${d(tail)}" fill="none" stroke="var(--link)" stroke-width="2" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>` : ""}
+            <path d="${d(solid)}" fill="none" stroke="var(--fg)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+            ${tail.length ? `<path d="${d(tail)}" fill="none" stroke="var(--fg)" stroke-width="2" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>` : ""}
           </svg>
-          ${si >= 0 ? `<span class="dot" style="left:${(si + 0.5) / n * 100}%;bottom:${cv[si] / maxBar * 85}%"></span>
-            <span class="tip ${si === 0 ? "l" : si === n - 1 ? "r" : ""}" style="left:${(si + 0.5) / n * 100}%;bottom:calc(${cv[si] / maxBar * 85}% + 12px)">${money(cv[si])}</span>` : ""}
+          <span class="vline" ${si < 0 ? "hidden" : ""}></span><span class="dot" ${si < 0 ? "hidden" : ""}></span><span class="tip" ${si < 0 ? "hidden" : ""}></span>
           <div class="hit">${cm.map(m => `<span class="bar" data-m="${m}" title="${monthName(m)}: ${money(M.per(m).made)}"></span>`).join("")}</div>
         </div>`; })()}
       <div class="barlabels ${cm.length > 12 ? "dense" : ""}">${cm.map((m, i) => `<span class="${m === sel ? "sel" : ""}"><span class="lg">${mon(m)}</span><span class="sm">${mon(m)[0]}</span>${range === "ALL" && (i === 0 || m.endsWith("-01")) ? `<span class="yr">${m.slice(2, 4)}</span>` : ""}</span>`).join("")}</div>
@@ -409,6 +409,29 @@ body.locked footer { max-width: 760px; }
       range = b.dataset.r;
       if (range !== "ALL" && sel.slice(0, 4) !== range) sel = range === thisYear ? ym(t) : `${range}-12`;
       render(); });
+    // line chart: drag (mouse or finger) to scrub months like a trading chart; the page follows when you let go
+    const lc = document.querySelector(".linechart");
+    if (lc) {
+      const n = cm.length;
+      const place = i => {
+        const x = (i + 0.5) / n * 100 + "%", b = cv[i] / maxBar * 85;
+        const tip = lc.querySelector(".tip");
+        lc.querySelector(".vline").style.left = x;
+        Object.assign(lc.querySelector(".dot").style, { left: x, bottom: b + "%" });
+        Object.assign(tip.style, { left: x, bottom: `calc(${b}% + 12px)`, transform: i === 0 ? "none" : i === n - 1 ? "translateX(-100%)" : "translateX(-50%)" });
+        tip.textContent = monthName(cm[i]).split(" ")[0] + " " + money(cv[i]);
+        lc.querySelectorAll(".vline,.dot,.tip").forEach(e => e.hidden = false);
+        document.querySelectorAll(".barlabels > span").forEach((e, j) => e.classList.toggle("sel", j === i));
+      };
+      const idx = e => { const r = lc.getBoundingClientRect(); return Math.max(0, Math.min(n - 1, Math.floor((e.clientX - r.left) / r.width * n))); };
+      let cur = cm.indexOf(sel), dragging = false;
+      if (cur >= 0) place(cur);
+      lc.addEventListener("pointerdown", e => { dragging = true; lc.setPointerCapture(e.pointerId); cur = idx(e); place(cur); });
+      lc.addEventListener("pointermove", e => { if (!dragging) return; const i = idx(e); if (i !== cur) { cur = i; place(i); } });
+      const end = () => { if (!dragging) return; dragging = false; if (cm[cur] !== sel) { sel = cm[cur]; render(); } };
+      lc.addEventListener("pointerup", end); lc.addEventListener("pointercancel", end);
+      lc.querySelectorAll(".hit .bar").forEach(b => b.onclick = null);
+    }
     document.querySelectorAll(".vw").forEach(b => b.onclick = () => { view = b.dataset.v; savePref(); render(); });
     document.querySelectorAll(".bar").forEach(b => b.onclick = () => { sel = b.dataset.m; render(); });
   }
