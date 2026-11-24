@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>HQ</title>
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #ffffff; --fg: #000000; --mute: #6b6b6b; --line: #e6e6e6; --link: #0000EE;
+  --bar: #000000; --bar2: #b8b8b8; --ok: #0a7d32; --warn: #c0392b; --due: #b35c00;
+  --font: "JetBrains Mono", ui-monospace, monospace; --size: 17px;
+}
+[data-theme="dark"] {
+  --bg: #000000; --fg: #ffffff; --mute: #8a8a8a; --line: #222222; --link: #58a6ff;
+  --bar: #ffffff; --bar2: #555555; --ok: #3ddc84; --warn: #ff6b5b; --due: #ffb04a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+html { background: var(--bg); -webkit-text-size-adjust: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: var(--size);
+  line-height: 1.45; letter-spacing: -0.02em; text-transform: uppercase; -webkit-font-smoothing: antialiased;
+  padding: 64px 24px 48px; }
+main, footer { max-width: 980px; margin: 0 auto; }
+a { color: var(--link); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { opacity: .7; }
+button { font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; background: none; border: 0; }
+.ul { text-decoration: underline; text-underline-offset: 3px; }
+.mute { color: var(--mute); }
+.ok { color: var(--ok); } .warn { color: var(--warn); } .due { color: var(--due); }
+h1 { font-size: var(--size); font-weight: 700; }
+h2 { font-size: var(--size); font-weight: 500; text-decoration: underline; text-underline-offset: 4px; margin: 48px 0 16px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* lock */
+#lock { min-height: 70vh; display: flex; flex-direction: column; justify-content: center; gap: 14px; max-width: 760px; margin: 0 auto; }
+#lock form { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+#lock input { font: inherit; color: var(--fg); background: transparent; border: 0; border-bottom: 1px solid var(--fg);
+  padding: 6px 0; width: min(320px, 100%); outline: none; letter-spacing: .05em; }
+.btn { background: var(--fg); color: var(--bg); padding: 8px 16px; font-weight: 700; }
+#err { color: var(--warn); min-height: 1.3em; }
+
+/* header */
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 24px; flex-wrap: wrap; }
+.monthnav { display: flex; gap: 14px; align-items: baseline; }
+.monthnav button:disabled { opacity: .25; cursor: default; }
+
+/* big numbers */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--fg); border-bottom: 1px solid var(--line); margin-top: 24px; }
+.stat { padding: 16px 16px 18px 0; }
+.stat + .stat { padding-left: 16px; border-left: 1px solid var(--line); }
+.stat .v { font-size: 34px; font-weight: 700; letter-spacing: -0.04em; line-height: 1.1; margin-top: 6px; }
+.stat .s { font-size: 13px; margin-top: 6px; }
+
+/* rows */
+.rows { list-style: none; }
+.rows li { display: grid; grid-template-columns: 120px 1fr auto; column-gap: 16px; padding: 9px 0; border-top: 1px solid var(--line); align-items: baseline; }
+.rows li:last-child { border-bottom: 1px solid var(--line); }
+.rows .r { text-align: right; white-space: nowrap; }
+.sub { display: block; font-size: 13px; color: var(--mute); }
+
+/* clients table */
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 9px 12px 9px 0; border-top: 1px solid var(--line); vertical-align: baseline; }
+th { font-weight: 500; color: var(--mute); font-size: 13px; border-top: 0; }
+td.n, th.n { text-align: right; padding-right: 0; padding-left: 12px; white-space: nowrap; }
+tr:last-child td { border-bottom: 1px solid var(--line); }
+.tag { display: inline-block; font-size: 12px; border: 1px solid currentColor; padding: 0 5px; margin-left: 6px; vertical-align: 2px; }
+
+/* bars */
+.bars { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 12px; align-items: end; height: 220px; border-bottom: 1px solid var(--fg); }
+.bar { display: flex; flex-direction: column; justify-content: flex-end; height: 100%; cursor: pointer; }
+.bar .t { font-size: 13px; text-align: center; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+.bar .seg { width: 100%; }
+.bar .paid { background: var(--bar); }
+.bar .unpaid { background: var(--bar2); }
+.bar .todo { background: repeating-linear-gradient(135deg, var(--bar2) 0 2px, transparent 2px 7px); border: 1px solid var(--bar2); border-bottom: 0; }
+.bar.sel .t { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.barlabels { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 12px; margin-top: 8px; font-size: 13px; text-align: center; color: var(--mute); }
+.barlabels .sel { color: var(--fg); font-weight: 700; }
+.legend { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--mute); margin-top: 14px; }
+.legend i { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; }
+
+/* meter */
+.meter { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 3px; margin: 12px 0 8px; }
+.meter span { height: 18px; background: var(--line); }
+.meter span.on { background: var(--bar); }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; }
+
+footer { margin-top: 48px; display: flex; justify-content: space-between; gap: 16px; }
+body.locked footer { max-width: 760px; }
+.copy { color: var(--mute); }
+
+@media (max-width: 760px) {
+  :root { --size: 14px; }
+  body { padding: 32px 16px; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stat:nth-child(3) { padding-left: 0; border-left: 0; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .stat .v { font-size: 26px; }
+  .cols { grid-template-columns: 1fr; }
+  .rows li { grid-template-columns: 1fr auto; }
+  .rows li > :first-child { grid-column: 1 / -1; font-size: 12px; }
+  .hide-sm { display: none; }
+  .bars { height: 160px; gap: 6px; } .barlabels { gap: 6px; }
+  .bar .t { font-size: 10px; }
+}
+</style>
+</head>
+<body class="locked">
+<main>
+  <div id="lock">
+    <h1>HQ</h1>
+    <p class="mute">PRIVATE. ENTER PASSWORD.</p>
+    <form id="f" autocomplete="on">
+      <input type="text" name="username" value="hq" autocomplete="username" hidden>
+      <input id="pw" type="password" autocomplete="current-password" placeholder="PASSWORD" aria-label="Password" required>
+      <button class="btn" type="submit">ENTER</button>
+    </form>
+    <p id="err" role="alert"></p>
+  </div>
+  <div id="app" hidden></div>
+</main>
+<footer>
+  <button id="theme" class="ul" type="button">[DARK MODE]</button>
+  <span><button id="logout" class="ul" type="button" hidden>[LOCK]</button></span>
+</footer>
+
+<script>
+(() => {
+  const KEY = "hq.key.v1";
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
+  };
+  const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const toB64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  const setTheme = t => { document.documentElement.dataset.theme = t; $("#theme").textContent = t === "dark" ? "[LIGHT MODE]" : "[DARK MODE]"; };
+  setTheme("light");
+  $("#theme").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+
+  /* crypto: same scheme as /vincere (PBKDF2-SHA256 -> AES-256-GCM); the derived key is remembered on this device */
+  let blob;
+  const derive = async (pw, b) => {
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64(b.salt), iterations: b.iter, hash: "SHA-256" },
+      base, { name: "AES-GCM", length: 256 }, true, ["decrypt"]);
+  };
+  const decrypt = async (key, b) => JSON.parse(new TextDecoder().decode(
+    await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(b.iv) }, key, b64(b.ct))));
+  const tryStored = async () => {
+    const raw = store.get(KEY); if (!raw) return null;
+    try {
+      const s = JSON.parse(raw); if (s.salt !== blob.salt) return null;
+      return await decrypt(await crypto.subtle.importKey("raw", b64(s.k), "AES-GCM", false, ["decrypt"]), blob);
+    } catch { return null; }
+  };
+  $("#f").onsubmit = async e => {
+    e.preventDefault(); $("#err").textContent = "CHECKING…";
+    try {
+      const key = await derive($("#pw").value.trim(), blob);
+      const data = await decrypt(key, blob);
+      store.set(KEY, JSON.stringify({ salt: blob.salt, k: toB64(await crypto.subtle.exportKey("raw", key)) }));
+      $("#err").textContent = ""; start(data);
+    } catch { $("#err").textContent = "WRONG PASSWORD."; }
+  };
+  $("#logout").onclick = () => { store.del(KEY); location.reload(); };
+
+  /* helpers */
+  const MON = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+  const ym = iso => iso.slice(0, 7);
+  const monthName = m => { const [y, mm] = m.split("-").map(Number); return `${MON[mm-1]} ${y}`; };
+  const dShort = iso => { if (!iso) return "—"; const [, m, d] = iso.split("-").map(Number); return `${d} ${MON[m-1]}`; };
+  const money = n => "$" + Math.round(n).toLocaleString("en-US");
+  const todayIso = () => { const t = new Date(); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}-${String(t.getDate()).padStart(2,"0")}`; };
+  const days = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
+  const addMonth = (m, k) => { let [y, mm] = m.split("-").map(Number); mm += k; while (mm > 12) { mm -= 12; y++; } while (mm < 1) { mm += 12; y--; } return `${y}-${String(mm).padStart(2,"0")}`; };
+
+  let D, sel;
+  function start(data) {
+    D = data;
+    document.body.classList.remove("locked"); $("#lock").hidden = true; $("#app").hidden = false; $("#logout").hidden = false;
+    sel = ym(todayIso());
+    render();
+  }
+
+  function model() {
+    const name = k => (D.clients.find(c => c.key === k) || {}).name || k.replace(/^other:/, "");
+    const inv = D.invoices.map(i => ({ ...i, open: Math.max(0, i.amount - i.paid) }));
+    const todo = D.work.filter(w => !w.invoiced && w.amount > 0);
+    const months = new Set([...inv.map(i => ym(i.sale)), ...todo.map(w => w.month), ym(todayIso())]);
+    const sorted = [...months].sort();
+    const all = []; for (let m = sorted[0]; m <= sorted[sorted.length - 1]; m = addMonth(m, 1)) all.push(m);
+    const per = m => {
+      const mi = inv.filter(i => ym(i.sale) === m), mt = todo.filter(w => w.month === m);
+      const paid = mi.reduce((s, i) => s + i.paid, 0), unpaid = mi.reduce((s, i) => s + i.open, 0);
+      const notInv = mt.reduce((s, w) => s + w.amount, 0);
+      return { m, inv: mi, todo: mt, paid, unpaid, notInv, made: paid + unpaid + notInv };
+    };
+    return { name, inv, todo, all, per };
+  }
+
+  function render() {
+    const M = model(), t = todayIso(), cur = M.per(sel), prev = M.per(addMonth(sel, -1));
+    const owed = M.inv.filter(i => i.open > 0), toInvoice = M.todo;
+    // one invoice per client per month (e.g. Decoded: all episodes of the month on one invoice)
+    const invGroups = Object.values(toInvoice.reduce((acc, w) => {
+      const k = w.client + "|" + w.month;
+      (acc[k] ||= { client: w.client, month: w.month, items: [], total: 0 }).items.push(w);
+      acc[k].total += w.amount; return acc;
+    }, {})).sort((a, b) => a.month.localeCompare(b.month) || b.total - a.total);
+    const owedSum = owed.reduce((s, i) => s + i.open, 0), toInvSum = toInvoice.reduce((s, w) => s + w.amount, 0);
+    const total = M.all.reduce((s, m) => s + M.per(m).made, 0);
+    const delta = prev.made ? Math.round((cur.made - prev.made) / prev.made * 100) : null;
+    const maxBar = Math.max(...M.all.map(m => M.per(m).made), 1);
+    const isNow = sel === ym(t);
+
+    // per client, for the selected month and all time
+    const keys = [...new Set([...D.clients.map(c => c.key), ...M.inv.map(i => i.client)])];
+    const clientRows = keys.map(k => {
+      const c = D.clients.find(x => x.key === k) || { key: k, name: M.name(k), status: "past", role: "", rate: "" };
+      const ci = M.inv.filter(i => i.client === k), ct = M.todo.filter(w => w.client === k);
+      const sum = (arr, m) => arr.filter(x => !m || (x.sale ? ym(x.sale) : x.month) === m).reduce((s, x) => s + x.amount, 0);
+      const last = [...ci.map(i => i.sale), ...D.work.filter(w => w.client === k).map(w => w.date)].sort().pop();
+      return { c, month: sum(ci, sel) + sum(ct, sel), all: sum(ci) + sum(ct), owed: ci.reduce((s, i) => s + i.open, 0) + sum(ct), last };
+    }).filter(r => r.all > 0 || r.c.status !== "past").sort((a, b) => b.month - a.month || b.all - a.all);
+
+    const V = D.vincere;
+    const log = D.work.filter(w => w.month === sel).sort((a, b) => b.date.localeCompare(a.date));
+
+    $("#app").innerHTML = `
+      <div class="top">
+        <h1>HQ · IGOR</h1>
+        <div class="monthnav">
+          <button id="prev" class="ul" ${sel <= M.all[0] ? "disabled" : ""}>←</button>
+          <span class="num">${monthName(sel)}</span>
+          <button id="next" class="ul" ${sel >= M.all[M.all.length - 1] ? "disabled" : ""}>→</button>
+        </div>
+      </div>
+      <p class="mute" style="margin-top:6px">UPDATED ${esc(D.updated)}${D.offline ? " · OFFLINE BUILD, NO IFIRMA DATA" : ""}</p>
+
+      <div class="stats">
+        <div class="stat"><div class="mute">${isNow ? "MADE THIS MONTH" : "MADE IN " + monthName(sel).split(" ")[0]}</div>
+          <div class="v num">${money(cur.made)}</div>
+          <div class="s mute">${delta === null ? "&nbsp;" : (delta >= 0 ? "+" : "") + delta + "% VS " + monthName(addMonth(sel, -1)).split(" ")[0]}</div></div>
+        <div class="stat"><div class="mute">PAID</div><div class="v num">${money(cur.paid)}</div>
+          <div class="s mute">${cur.made ? Math.round(cur.paid / cur.made * 100) + "% OF THE MONTH" : "&nbsp;"}</div></div>
+        <div class="stat"><div class="mute">WAITING FOR PAYMENT</div><div class="v num ${owedSum ? "due" : ""}">${money(owedSum)}</div>
+          <div class="s mute">${owed.length} INVOICE${owed.length === 1 ? "" : "S"}, ALL MONTHS</div></div>
+        <div class="stat"><div class="mute">NOT INVOICED YET</div><div class="v num ${toInvSum ? "warn" : ""}">${money(toInvSum)}</div>
+          <div class="s mute">DELIVERED, NO INVOICE</div></div>
+      </div>
+
+      <h2>BY MONTH:</h2>
+      <div class="bars">${M.all.map(m => { const p = M.per(m), h = v => (v / maxBar * 100) + "%";
+        return `<div class="bar ${m === sel ? "sel" : ""}" data-m="${m}" title="${monthName(m)}: ${money(p.made)}">
+          <span class="t">${p.made ? money(p.made) : ""}</span>
+          <span class="seg todo" style="height:${h(p.notInv)}"></span>
+          <span class="seg unpaid" style="height:${h(p.unpaid)}"></span>
+          <span class="seg paid" style="height:${h(p.paid)}"></span></div>`; }).join("")}</div>
+      <div class="barlabels">${M.all.map(m => `<span class="${m === sel ? "sel" : ""}">${monthName(m).split(" ")[0]}</span>`).join("")}</div>
+      <div class="legend">
+        <span><i style="background:var(--bar)"></i>PAID</span>
+        <span><i style="background:var(--bar2)"></i>INVOICED, NOT PAID</span>
+        <span><i class="seg todo" style="background:repeating-linear-gradient(135deg,var(--bar2) 0 2px,transparent 2px 5px);border:1px solid var(--bar2)"></i>NOT INVOICED</span>
+        <span style="margin-left:auto">TOTAL SINCE ${monthName(M.all[0])}: <b class="num" style="color:var(--fg)">${money(total)}</b> · AVG ${money(total / M.all.length)}/MO</span>
+      </div>
+
+      <h2>NEEDS ACTION:</h2>
+      <ul class="rows">
+        ${invGroups.map(g => `<li><span class="mute">${monthName(g.month).split(" ")[0]}</span>
+          <span><span class="warn">SEND INVOICE</span> · ${esc(M.name(g.client))}<span class="sub">${g.items.length > 1 ? g.items.length + " ITEMS: " : ""}${g.items.map(w => esc(w.item.split(/[,:(]/)[0].trim())).join(" · ")}</span></span>
+          <span class="r num">${money(g.total)}</span></li>`).join("")}
+        ${owed.map(i => { const late = i.due && i.due < t, dd = i.due ? days(t, i.due) : null;
+          return `<li><span class="mute">${dShort(i.issued)}</span>
+          <span><span class="${late ? "warn" : "due"}">${late ? "OVERDUE " + (-dd) + "D" : "UNPAID"}</span> · ${esc(M.name(i.client))} · INVOICE ${esc(i.no)}
+            <span class="sub">DUE ${dShort(i.due)}${!late && dd !== null ? " (IN " + dd + " DAYS)" : ""}${i.paid ? " · " + money(i.paid) + " PAID SO FAR" : ""}</span></span>
+          <span class="r num">${money(i.open)}</span></li>`; }).join("")}
+        ${D.todo.map(x => `<li><span class="mute">TO DO</span><span>${esc(x)}</span><span></span></li>`).join("")}
+        ${!toInvoice.length && !owed.length && !D.todo.length ? `<li><span class="ok">ALL CLEAR</span><span></span><span></span></li>` : ""}
+      </ul>
+
+      <h2>CLIENTS:</h2>
+      <table>
+        <thead><tr><th>CLIENT</th><th class="hide-sm">DEAL</th><th class="n">${monthName(sel).split(" ")[0]}</th><th class="n hide-sm">OWED</th><th class="n">ALL TIME</th></tr></thead>
+        <tbody>${clientRows.map(r => `<tr>
+          <td><b>${esc(r.c.name)}</b>${r.c.status !== "active" ? `<span class="tag mute">${esc(r.c.status)}</span>` : ""}
+            <span class="sub">${esc(r.c.role)}${r.last ? (r.c.role ? " · " : "") + "LAST " + dShort(r.last) : ""}</span></td>
+          <td class="hide-sm mute" style="font-size:13px">${esc(r.c.rate) || "—"}</td>
+          <td class="n num">${r.month ? money(r.month) : "<span class='mute'>—</span>"}</td>
+          <td class="n num hide-sm ${r.owed ? "due" : "mute"}">${r.owed ? money(r.owed) : "—"}</td>
+          <td class="n num">${money(r.all)}</td></tr>`).join("")}</tbody>
+      </table>
+
+      <div class="cols">
+        <div>
+          ${V ? `<h2>VINCERE RETAINER:</h2>
+          <p>CYCLE ${esc(V.id.replace("C", ""))} · ${dShort(V.start)} – ${dShort(V.end)}</p>
+          <div class="meter" style="--n:${V.included}">${Array.from({ length: V.included }, (_, i) => `<span class="${i < V.used ? "on" : ""}"></span>`).join("")}</div>
+          <p class="num">${V.used}/${V.included} ADS USED · ${Math.max(0, V.included - V.used)} LEFT · ${Math.max(0, days(t, V.end))} DAYS LEFT</p>
+          <p class="mute" style="margin-top:8px;font-size:13px">IN PROGRESS: ${V.open.length ? V.open.map(esc).join(" · ") : "NONE"}</p>` : ""}
+        </div>
+        <div>
+          <h2>PIPELINE:</h2>
+          <ul class="rows">${D.pipeline.map(p => `<li style="grid-template-columns:1fr auto">
+            <span><b>${esc(p.client)}</b><span class="sub">${esc(p.what)} · ${esc(p.stage)}</span></span>
+            <span class="r num">${p.value ? money(p.value) + (p.per ? "/" + esc(p.per).slice(0, 2).toUpperCase() : "") : ""}</span></li>`).join("")}</ul>
+        </div>
+      </div>
+
+      <h2>DELIVERED IN ${monthName(sel)}:</h2>
+      <ul class="rows">${log.length ? log.map(w => `<li><span class="mute">${dShort(w.date)}</span>
+        <span>${esc(M.name(w.client))}<span class="sub">${esc(w.item)}</span></span>
+        <span class="r num ${w.amount ? "" : "mute"}">${w.amount ? money(w.amount) : "INCL."}</span></li>`).join("")
+        : `<li><span class="mute">—</span><span class="mute">NOTHING LOGGED IN BILLING/${sel}.MD</span><span></span></li>`}</ul>
+
+      <h2>INVOICES:</h2>
+      <ul class="rows">${M.inv.map(i => `<li><span class="mute">${dShort(i.sale)} ${i.sale.slice(0, 4)}</span>
+        <span>${esc(M.name(i.client))} <span class="mute">· ${esc(i.no)}</span></span>
+        <span class="r num">${money(i.amount)} ${i.open ? `<span class="due">UNPAID</span>` : `<span class="ok">PAID</span>`}</span></li>`).join("")}</ul>
+    `;
+    $("#prev").onclick = () => { sel = addMonth(sel, -1); render(); };
+    $("#next").onclick = () => { sel = addMonth(sel, 1); render(); };
+    document.querySelectorAll(".bar").forEach(b => b.onclick = () => { sel = b.dataset.m; render(); });
+  }
+
+  (async () => {
+    try {
+      const r = await fetch("data.enc.json?t=" + Date.now(), { cache: "no-store" });
+      blob = await r.json();
+    } catch { $("#err").textContent = "NO DATA."; return; }
+    const data = await tryStored();
+    if (data) start(data);
+  })();
+})();
+</script>
+</body>
+</html>
