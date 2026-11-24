@@ -295,7 +295,7 @@ body.locked footer { max-width: 760px; }
         ${owed.map(i => { const late = i.due && i.due < t, dd = i.due ? days(t, i.due) : null;
           return `<li>
           <span>${esc(M.name(i.client))}
-            <span class="sub"><span class="${late ? "warn" : "due"}">${late ? "OVERDUE" : "UNPAID"}</span> · ${late ? (-dd) + " DAYS LATE" : dd === 0 ? "DUE TODAY" : "DUE IN " + dd + " DAY" + (dd === 1 ? "" : "S")}</span></span>
+            <span class="sub"><span class="${late ? "warn" : "due"}">INVOICE SENT · ${late ? "OVERDUE" : "UNPAID"}</span> · ${late ? (-dd) + " DAYS LATE" : dd === 0 ? "DUE TODAY" : "DUE IN " + dd + " DAY" + (dd === 1 ? "" : "S")}</span></span>
           <span class="r num">${money(i.open)}</span></li>`; }).join("")}
         ${!invGroups.length && !owed.length ? `<li><span class="ok">ALL CLEAR</span><span></span></li>` : ""}
       </ul>
