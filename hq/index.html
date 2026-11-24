@@ -250,8 +250,10 @@ body.locked footer { max-width: 760px; }
     const owed = M.inv.filter(i => i.open > 0), toInvoice = M.todo;
     // one invoice per client per month (e.g. Decoded: all episodes of the month on one invoice)
     const invGroups = Object.values(toInvoice.reduce((acc, w) => {
-      const k = w.client + "|" + w.month;
-      (acc[k] ||= { client: w.client, month: w.month, items: [], total: 0 }).items.push(w);
+      // invoicePlan (hq.json) can move a client's uninvoiced work onto a later month's invoice
+      const plan = (D.invoicePlan || []).find(p => p.client === w.client && w.month >= p.work_from && w.month <= p.invoice_in);
+      const im = plan ? plan.invoice_in : w.month, k = w.client + "|" + im;
+      (acc[k] ||= { client: w.client, month: im, items: [], total: 0 }).items.push(w);
       acc[k].total += w.amount; return acc;
     }, {})).sort((a, b) => a.month.localeCompare(b.month) || b.total - a.total);
     const owedSum = owed.reduce((s, i) => s + i.open, 0), toInvSum = toInvoice.reduce((s, w) => s + w.amount, 0);
@@ -309,7 +311,7 @@ body.locked footer { max-width: 760px; }
         <div class="stat"><div class="mute">WAITING</div><div class="v num ${owedSum ? "due" : ""}">${money(owedSum)}</div>
           <div class="s mute">${owed.length} UNPAID INVOICE${owed.length === 1 ? "" : "S"}</div></div>
         <div class="stat"><div class="mute">TO INVOICE</div><div class="v num ${toInvSum ? "warn" : ""}">${money(toInvSum)}</div>
-          <div class="s mute">${invGroups.length} INVOICE${invGroups.length === 1 ? "" : "S"} TO SEND</div></div>
+          <div class="s mute">${(n => n + " TO SEND NOW")(invGroups.filter(g => g.month <= ym(t)).length)}${invGroups.some(g => g.month > ym(t)) ? " · " + invGroups.filter(g => g.month > ym(t)).length + " LATER" : ""}</div></div>
       </div>
 
       <h2>BY MONTH:</h2>
@@ -354,7 +356,7 @@ body.locked footer { max-width: 760px; }
       <h2>NEEDS ACTION:</h2>
       <ul class="rows two">
         ${invGroups.map(g => `<li>
-          <span>${esc(M.name(g.client))}<span class="sub"><span class="warn">SEND INVOICE</span> · ${mon(g.month)} · ${g.items.length > 1 ? g.items.length + " ITEMS" : esc(short(g.items[0].item))}</span></span>
+          <span>${esc(M.name(g.client))}<span class="sub">${g.month > ym(t) ? `<span class="mute">ON ${mon(g.month)} INVOICE</span>` : `<span class="warn">SEND INVOICE</span> · ${mon(g.month)}`} · ${g.items.length > 1 ? g.items.length + " ITEMS" : esc(short(g.items[0].item))}</span></span>
           <span class="r num">${money(g.total)}</span></li>`).join("")}
         ${owed.map(i => { const late = i.due && i.due < t, dd = i.due ? days(t, i.due) : null;
           return `<li>
