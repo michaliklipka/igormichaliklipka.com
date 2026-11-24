@@ -272,19 +272,6 @@ body.locked footer { max-width: 760px; }
           <div class="s mute">${invGroups.length} INVOICE${invGroups.length === 1 ? "" : "S"} TO SEND</div></div>
       </div>
 
-      <h2>NEEDS ACTION:</h2>
-      <ul class="rows two">
-        ${invGroups.map(g => `<li>
-          <span>${esc(M.name(g.client))}<span class="sub"><span class="warn">SEND INVOICE</span> · ${mon(g.month)} · ${g.items.length > 1 ? g.items.length + " ITEMS" : esc(short(g.items[0].item))}</span></span>
-          <span class="r num">${money(g.total)}</span></li>`).join("")}
-        ${owed.map(i => { const late = i.due && i.due < t, dd = i.due ? days(t, i.due) : null;
-          return `<li>
-          <span>${esc(M.name(i.client))}
-            <span class="sub"><span class="${late ? "warn" : "due"}">${late ? "OVERDUE" : "UNPAID"}</span> · ${late ? (-dd) + " DAYS LATE" : dd === 0 ? "DUE TODAY" : "DUE IN " + dd + " DAY" + (dd === 1 ? "" : "S")}</span></span>
-          <span class="r num">${money(i.open)}</span></li>`; }).join("")}
-        ${!invGroups.length && !owed.length ? `<li><span class="ok">ALL CLEAR</span><span></span></li>` : ""}
-      </ul>
-
       <h2>BY MONTH:</h2>
       <div class="bars">${M.all.map(m => { const p = M.per(m), h = v => (v / maxBar * 100) + "%";
         return `<div class="bar ${m === sel ? "sel" : ""}" data-m="${m}" title="${monthName(m)}: ${money(p.made)}">
@@ -299,6 +286,19 @@ body.locked footer { max-width: 760px; }
         <span><i style="background:repeating-linear-gradient(135deg,var(--bar2) 0 2px,transparent 2px 5px);border:1px solid var(--bar2)"></i>TO INVOICE</span>
       </div>
       <p class="small" style="margin-top:10px"><span class="mute">SINCE ${mon(M.all[0])}</span> <b class="num">${money(total)}</b> <span class="mute">· AVG</span> <b class="num">${money(total / M.all.length)}</b><span class="mute">/MO</span></p>
+
+      <h2>NEEDS ACTION:</h2>
+      <ul class="rows two">
+        ${invGroups.map(g => `<li>
+          <span>${esc(M.name(g.client))}<span class="sub"><span class="warn">SEND INVOICE</span> · ${mon(g.month)} · ${g.items.length > 1 ? g.items.length + " ITEMS" : esc(short(g.items[0].item))}</span></span>
+          <span class="r num">${money(g.total)}</span></li>`).join("")}
+        ${owed.map(i => { const late = i.due && i.due < t, dd = i.due ? days(t, i.due) : null;
+          return `<li>
+          <span>${esc(M.name(i.client))}
+            <span class="sub"><span class="${late ? "warn" : "due"}">${late ? "OVERDUE" : "UNPAID"}</span> · ${late ? (-dd) + " DAYS LATE" : dd === 0 ? "DUE TODAY" : "DUE IN " + dd + " DAY" + (dd === 1 ? "" : "S")}</span></span>
+          <span class="r num">${money(i.open)}</span></li>`; }).join("")}
+        ${!invGroups.length && !owed.length ? `<li><span class="ok">ALL CLEAR</span><span></span></li>` : ""}
+      </ul>
 
       <h2>CLIENTS:</h2>
       <table>
