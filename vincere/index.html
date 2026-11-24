@@ -230,7 +230,7 @@ footer { margin-top: 3rem; display: flex; gap: 1.5rem; font-size: 14px; }
       <span class="num">${esc(a.n)}</span>
       <span>${esc(a.title)}<span class="tag">${esc(a.format)}</span></span>
       <span class="right">${right}</span>
-      <span class="meta">${esc(a.versions || "")}${a.length ? " · " + esc(a.length) : ""}${(a.count || 1) > 1 ? " · COUNTS AS " + a.count + " ADS" : ""}${a.received ? " · RECEIVED " + dShort(a.received) : ""}${a.note ? " · " + esc(a.note) : ""}</span>
+      <span class="meta">${esc(a.versions || "")}${a.length ? " · " + esc(a.length) : ""}${(a.count || 1) > 1 ? " · COUNTS AS " + a.count + " ADS" + (a.countWhy ? " (" + esc(a.countWhy) + ")" : "") : ""}${a.received ? " · RECEIVED " + dShort(a.received) : ""}${a.note ? " · " + esc(a.note) : ""}</span>
       ${steps}
     </div>`;
   };
