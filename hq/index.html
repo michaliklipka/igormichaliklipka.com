@@ -61,6 +61,8 @@ h2 { font-size: var(--size); font-weight: 500; text-decoration: underline; text-
 .rows li { display: grid; grid-template-columns: 120px 1fr auto; column-gap: 16px; padding: 9px 0; border-top: 1px solid var(--line); align-items: baseline; }
 .rows li:last-child { border-bottom: 1px solid var(--line); }
 .rows .r { text-align: right; white-space: nowrap; }
+.rows li > span { min-width: 0; overflow-wrap: anywhere; }
+td { overflow-wrap: anywhere; }
 .sub { display: block; font-size: 13px; color: var(--mute); }
 
 /* clients table */
@@ -103,7 +105,9 @@ body.locked footer { max-width: 760px; }
   .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
   .stat .v { font-size: 26px; }
   .cols { grid-template-columns: 1fr; }
-  .rows li { grid-template-columns: 1fr auto; }
+  .rows li { grid-template-columns: minmax(0, 1fr) auto; }
+  .rows .r .ok, .rows .r .due { display: block; font-size: 11px; }
+  .legend span[style*="margin-left"] { margin-left: 0 !important; }
   .rows li > :first-child { grid-column: 1 / -1; font-size: 12px; }
   .hide-sm { display: none; }
   .bars { height: 160px; gap: 6px; } .barlabels { gap: 6px; }
