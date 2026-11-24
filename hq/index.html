@@ -348,7 +348,7 @@ body.locked footer { max-width: 760px; }
       </div>` : ""}
       <p class="small" style="margin-top:12px">${range === "ALL"
         ? `${yearsAll.map(y => `<span class="mute">${y}${y === thisYear ? " YTD" : ""}</span> <b class="num">${money(M.all.filter(m => m.startsWith(y)).reduce((a, m) => a + M.per(m).made, 0))}</b>`).join(` <span class="mute">·</span> `)} <span class="mute">· ALL</span> <b class="num">${money(rTotal)}</b> <span class="mute">· AVG</span> <b class="num">${money(rTotal / rMonths)}</b><span class="mute">/MO</span>`
-        : `<span class="mute">${range}${range === thisYear ? " YTD" : ""}</span> <b class="num">${money(rTotal)}</b> <span class="mute">· AVG</span> <b class="num">${money(rTotal / rMonths)}</b><span class="mute">/MO</span>${rTotal ? ` <span class="mute">· BEST ${mon(cm[bestI])}</span> <b class="num">${kfmt(cv[bestI])}</b>` : ""}${prevYearSame ? ` <span class="mute">· VS ${Number(range) - 1} SAME PERIOD</span> <b class="num">${rTotal >= prevYearSame ? "+" : ""}${Math.round((rTotal - prevYearSame) / prevYearSame * 100)}%</b>` : ""}`}</p>
+        : `<span class="mute">${range}${range === thisYear ? " YTD" : ""}</span> <b class="num">${money(rTotal)}</b> <span class="mute">· AVG</span> <b class="num">${money(rTotal / rMonths)}</b><span class="mute">/MO</span>${prevYearSame ? ` <span class="mute">· VS ${Number(range) - 1} SAME PERIOD</span> <b class="num">${rTotal >= prevYearSame ? "+" : ""}${Math.round((rTotal - prevYearSame) / prevYearSame * 100)}%</b>` : ""}`}</p>
 
       <h2>NEEDS ACTION:</h2>
       <ul class="rows two">
