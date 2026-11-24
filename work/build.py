@@ -23,6 +23,14 @@ PROJECTS = [
 PAGE = """<!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        // theme: the visitor's own choice if they made one, otherwise their system setting
+        (function () {{
+            var saved = null; try {{ saved = localStorage.getItem('theme'); }} catch (e) {{}}
+            var sys = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', saved === 'dark' || saved === 'light' ? saved : sys);
+        }})();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title} · Igor Michalik-Lipka</title>
@@ -113,7 +121,7 @@ PAGE = """<!DOCTYPE html>
             const root = document.documentElement, t = document.getElementById('theme-toggle');
             const label = () => t.textContent = root.getAttribute('data-theme') === 'dark' ? '[LIGHT MODE]' : '[DARK MODE]';
             label();
-            t.addEventListener('click', () => {{ root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); label(); }});
+            t.addEventListener('click', () => {{ const n = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; root.setAttribute('data-theme', n); try {{ localStorage.setItem('theme', n); }} catch (e) {{}} label(); }});
         }})();
     </script>
 </body>
