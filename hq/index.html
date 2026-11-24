@@ -176,8 +176,9 @@ body.locked footer { max-width: 760px; }
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   const setTheme = t => { document.documentElement.dataset.theme = t; $("#theme").textContent = t === "dark" ? "[LIGHT MODE]" : "[DARK MODE]"; };
-  setTheme("light");
-  $("#theme").onclick = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  // remembered on this device until switched back
+  setTheme(store.get("hq.theme") === "dark" ? "dark" : "light");
+  $("#theme").onclick = () => { const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; setTheme(t); store.set("hq.theme", t); };
 
   /* crypto: same scheme as /vincere (PBKDF2-SHA256 -> AES-256-GCM); the derived key is remembered on this device */
   let blob;
