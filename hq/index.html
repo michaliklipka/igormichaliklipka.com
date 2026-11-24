@@ -91,7 +91,8 @@ tr:last-child td { border-bottom: 1px solid var(--line); }
 .bar.sel .t { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .barlabels { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 12px; margin-top: 8px; font-size: 13px; text-align: center; color: var(--mute); }
 .barlabels .sel { color: var(--fg); font-weight: 700; }
-.barlabels .sm { display: none; }
+.barlabels .sm, .bar .t .sm { display: none; }
+.bars, .bar, .linechart, .linechart * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 .barlabels .yr { display: block; font-size: 10px; color: var(--mute); font-weight: 400; }
 .bars { gap: 6px; } .barlabels { gap: 6px; }
 .chartbar { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: -4px 0 18px; font-size: 13px; }
@@ -138,8 +139,8 @@ body.locked footer { max-width: 760px; }
   .bars { height: 160px; gap: 3px; } .barlabels { gap: 3px; font-size: 11px; }
   .barlabels.dense .lg { display: none; } .barlabels.dense .sm { display: inline; }
   .barlabels { font-size: 10px; } .linechart { height: 160px; }
-  .bars { overflow-x: clip; } .bar .t { visibility: hidden; } .bar.sel .t { visibility: visible; white-space: nowrap; }
-  .bar .t { font-size: 10px; }
+  .bars { overflow-x: clip; } .bar .t { font-size: 9px; letter-spacing: -0.04em; } .bar .t .lg { display: none; } .bar .t .sm { display: inline; }
+  .bars.dense .bar .t { visibility: hidden; } .bars.dense .bar.sel .t { visibility: visible; white-space: nowrap; }
 }
 </style>
 </head>
@@ -318,9 +319,9 @@ body.locked footer { max-width: 760px; }
         <div class="seg-ctl">${[["bars", "BARS"], ["line", "LINE"]].map(([v, l]) => `<button class="vw ${v === view ? "on" : ""}" data-v="${v}">${l}</button>`).join("")}</div>
       </div>
       ${view === "bars" ? `
-      <div class="bars">${cm.map(m => { const p = M.per(m), h = v => (v / maxBar * 100) + "%";
+      <div class="bars ${cm.length > 12 ? "dense" : ""}">${cm.map(m => { const p = M.per(m), h = v => (v / maxBar * 100) + "%";
         return `<div class="bar ${m === sel ? "sel" : ""}" data-m="${m}" title="${monthName(m)}: ${money(p.made)}">
-          <span class="t">${p.made ? kfmt(p.made) : ""}</span>
+          <span class="t">${p.made ? `<span class="lg">${kfmt(p.made)}</span><span class="sm">${kfmt(p.made).replace("$", "")}</span>` : ""}</span>
           <span class="seg todo" style="height:${h(p.notInv)}"></span>
           <span class="seg unpaid" style="height:${h(p.unpaid)}"></span>
           <span class="seg paid" style="height:${h(p.paid)}"></span></div>`; }).join("")}</div>` : (() => {
