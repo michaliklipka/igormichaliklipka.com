@@ -61,6 +61,12 @@ h2 { font-size: var(--size); font-weight: 500; text-decoration: underline; text-
 .rows li { display: grid; grid-template-columns: 120px 1fr auto; column-gap: 16px; padding: 9px 0; border-top: 1px solid var(--line); align-items: baseline; }
 .rows li:last-child { border-bottom: 1px solid var(--line); }
 .rows .r { text-align: right; white-space: nowrap; }
+.rows.two li { grid-template-columns: minmax(0, 1fr) auto; }
+.small { font-size: 13px; }
+details summary { list-style: none; cursor: pointer; }
+details summary::-webkit-details-marker { display: none; }
+details summary h2::after { content: " +"; }
+details[open] summary h2::after { content: " −"; }
 .rows li > span { min-width: 0; overflow-wrap: anywhere; }
 td { overflow-wrap: anywhere; }
 .sub { display: block; font-size: 13px; color: var(--mute); }
@@ -106,7 +112,8 @@ body.locked footer { max-width: 760px; }
   .stat .v { font-size: 26px; }
   .cols { grid-template-columns: 1fr; }
   .rows li { grid-template-columns: minmax(0, 1fr) auto; }
-  .rows .r .ok, .rows .r .due { display: block; font-size: 11px; }
+  .rows.two li > :first-child { grid-column: auto; font-size: inherit; }
+  .sub { font-size: 12px; }
   .legend span[style*="margin-left"] { margin-left: 0 !important; }
   .rows li > :first-child { grid-column: 1 / -1; font-size: 12px; }
   .hide-sm { display: none; }
@@ -239,97 +246,98 @@ body.locked footer { max-width: 760px; }
 
     const V = D.vincere;
     const log = D.work.filter(w => w.month === sel).sort((a, b) => b.date.localeCompare(a.date));
+    const short = txt => txt.split(/[,:(;]/)[0].trim();
+    const mon = m => monthName(m).split(" ")[0];
 
     $("#app").innerHTML = `
       <div class="top">
-        <h1>HQ · IGOR</h1>
+        <h1>HQ</h1>
         <div class="monthnav">
-          <button id="prev" class="ul" ${sel <= M.all[0] ? "disabled" : ""}>←</button>
+          <button id="prev" class="ul" ${sel <= M.all[0] ? "disabled" : ""} aria-label="Previous month">←</button>
           <span class="num">${monthName(sel)}</span>
-          <button id="next" class="ul" ${sel >= M.all[M.all.length - 1] ? "disabled" : ""}>→</button>
+          <button id="next" class="ul" ${sel >= M.all[M.all.length - 1] ? "disabled" : ""} aria-label="Next month">→</button>
         </div>
       </div>
-      <p class="mute" style="margin-top:6px">UPDATED ${esc(D.updated)}${D.offline ? " · OFFLINE BUILD, NO IFIRMA DATA" : ""}</p>
+      <p class="mute small" style="margin-top:4px">UPDATED ${dShort(D.updated.slice(0, 10))} ${esc(D.updated.slice(11))}${D.offline ? " · NO IFIRMA DATA" : ""}</p>
 
       <div class="stats">
-        <div class="stat"><div class="mute">${isNow ? "MADE THIS MONTH" : "MADE IN " + monthName(sel).split(" ")[0]}</div>
+        <div class="stat"><div class="mute">MADE</div>
           <div class="v num">${money(cur.made)}</div>
-          <div class="s mute">${delta === null ? "&nbsp;" : (delta >= 0 ? "+" : "") + delta + "% VS " + monthName(addMonth(sel, -1)).split(" ")[0]}</div></div>
+          <div class="s mute">${delta === null ? "&nbsp;" : (delta >= 0 ? "+" : "") + delta + "% VS " + mon(addMonth(sel, -1))}</div></div>
         <div class="stat"><div class="mute">PAID</div><div class="v num">${money(cur.paid)}</div>
-          <div class="s mute">${cur.made ? Math.round(cur.paid / cur.made * 100) + "% OF THE MONTH" : "&nbsp;"}</div></div>
-        <div class="stat"><div class="mute">WAITING FOR PAYMENT</div><div class="v num ${owedSum ? "due" : ""}">${money(owedSum)}</div>
-          <div class="s mute">${owed.length} INVOICE${owed.length === 1 ? "" : "S"}, ALL MONTHS</div></div>
-        <div class="stat"><div class="mute">NOT INVOICED YET</div><div class="v num ${toInvSum ? "warn" : ""}">${money(toInvSum)}</div>
-          <div class="s mute">DELIVERED, NO INVOICE</div></div>
+          <div class="s mute">${cur.made ? Math.round(cur.paid / cur.made * 100) + "% OF " + mon(sel) : "&nbsp;"}</div></div>
+        <div class="stat"><div class="mute">WAITING</div><div class="v num ${owedSum ? "due" : ""}">${money(owedSum)}</div>
+          <div class="s mute">${owed.length} UNPAID INVOICE${owed.length === 1 ? "" : "S"}</div></div>
+        <div class="stat"><div class="mute">TO INVOICE</div><div class="v num ${toInvSum ? "warn" : ""}">${money(toInvSum)}</div>
+          <div class="s mute">${invGroups.length} INVOICE${invGroups.length === 1 ? "" : "S"} TO SEND</div></div>
       </div>
+
+      <h2>NEEDS ACTION:</h2>
+      <ul class="rows two">
+        ${invGroups.map(g => `<li>
+          <span>${esc(M.name(g.client))}<span class="sub"><span class="warn">SEND INVOICE</span> · ${mon(g.month)} · ${g.items.length > 1 ? g.items.length + " ITEMS" : esc(short(g.items[0].item))}</span></span>
+          <span class="r num">${money(g.total)}</span></li>`).join("")}
+        ${owed.map(i => { const late = i.due && i.due < t, dd = i.due ? days(t, i.due) : null;
+          return `<li>
+          <span>${esc(M.name(i.client))}
+            <span class="sub"><span class="${late ? "warn" : "due"}">${late ? "OVERDUE" : "UNPAID"}</span> · ${late ? (-dd) + " DAYS LATE" : dd === 0 ? "DUE TODAY" : "DUE IN " + dd + " DAY" + (dd === 1 ? "" : "S")}</span></span>
+          <span class="r num">${money(i.open)}</span></li>`; }).join("")}
+        ${!invGroups.length && !owed.length ? `<li><span class="ok">ALL CLEAR</span><span></span></li>` : ""}
+      </ul>
 
       <h2>BY MONTH:</h2>
       <div class="bars">${M.all.map(m => { const p = M.per(m), h = v => (v / maxBar * 100) + "%";
         return `<div class="bar ${m === sel ? "sel" : ""}" data-m="${m}" title="${monthName(m)}: ${money(p.made)}">
-          <span class="t">${p.made ? money(p.made) : ""}</span>
+          <span class="t">${p.made ? (p.made >= 1000 ? "$" + (p.made / 1000).toFixed(1).replace(/\.0$/, "") + "K" : money(p.made)) : ""}</span>
           <span class="seg todo" style="height:${h(p.notInv)}"></span>
           <span class="seg unpaid" style="height:${h(p.unpaid)}"></span>
           <span class="seg paid" style="height:${h(p.paid)}"></span></div>`; }).join("")}</div>
-      <div class="barlabels">${M.all.map(m => `<span class="${m === sel ? "sel" : ""}">${monthName(m).split(" ")[0]}</span>`).join("")}</div>
+      <div class="barlabels">${M.all.map(m => `<span class="${m === sel ? "sel" : ""}">${mon(m)}</span>`).join("")}</div>
       <div class="legend">
         <span><i style="background:var(--bar)"></i>PAID</span>
-        <span><i style="background:var(--bar2)"></i>INVOICED, NOT PAID</span>
-        <span><i class="seg todo" style="background:repeating-linear-gradient(135deg,var(--bar2) 0 2px,transparent 2px 5px);border:1px solid var(--bar2)"></i>NOT INVOICED</span>
-        <span style="margin-left:auto">TOTAL SINCE ${monthName(M.all[0])}: <b class="num" style="color:var(--fg)">${money(total)}</b> · AVG ${money(total / M.all.length)}/MO</span>
+        <span><i style="background:var(--bar2)"></i>UNPAID</span>
+        <span><i style="background:repeating-linear-gradient(135deg,var(--bar2) 0 2px,transparent 2px 5px);border:1px solid var(--bar2)"></i>TO INVOICE</span>
       </div>
-
-      <h2>NEEDS ACTION:</h2>
-      <ul class="rows">
-        ${invGroups.map(g => `<li><span class="mute">${monthName(g.month).split(" ")[0]}</span>
-          <span><span class="warn">SEND INVOICE</span> · ${esc(M.name(g.client))}<span class="sub">${g.items.length > 1 ? g.items.length + " ITEMS: " : ""}${g.items.map(w => esc(w.item.split(/[,:(]/)[0].trim())).join(" · ")}</span></span>
-          <span class="r num">${money(g.total)}</span></li>`).join("")}
-        ${owed.map(i => { const late = i.due && i.due < t, dd = i.due ? days(t, i.due) : null;
-          return `<li><span class="mute">${dShort(i.issued)}</span>
-          <span><span class="${late ? "warn" : "due"}">${late ? "OVERDUE " + (-dd) + "D" : "UNPAID"}</span> · ${esc(M.name(i.client))} · INVOICE ${esc(i.no)}
-            <span class="sub">DUE ${dShort(i.due)}${!late && dd !== null ? " (IN " + dd + " DAYS)" : ""}${i.paid ? " · " + money(i.paid) + " PAID SO FAR" : ""}</span></span>
-          <span class="r num">${money(i.open)}</span></li>`; }).join("")}
-        ${D.todo.map(x => `<li><span class="mute">TO DO</span><span>${esc(x)}</span><span></span></li>`).join("")}
-        ${!toInvoice.length && !owed.length && !D.todo.length ? `<li><span class="ok">ALL CLEAR</span><span></span><span></span></li>` : ""}
-      </ul>
+      <p class="small" style="margin-top:10px"><span class="mute">SINCE ${mon(M.all[0])}</span> <b class="num">${money(total)}</b> <span class="mute">· AVG</span> <b class="num">${money(total / M.all.length)}</b><span class="mute">/MO</span></p>
 
       <h2>CLIENTS:</h2>
       <table>
-        <thead><tr><th>CLIENT</th><th class="hide-sm">DEAL</th><th class="n">${monthName(sel).split(" ")[0]}</th><th class="n hide-sm">OWED</th><th class="n">ALL TIME</th></tr></thead>
-        <tbody>${clientRows.map(r => `<tr>
-          <td><b>${esc(r.c.name)}</b>${r.c.status !== "active" ? `<span class="tag mute">${esc(r.c.status)}</span>` : ""}
-            <span class="sub">${esc(r.c.role)}${r.last ? (r.c.role ? " · " : "") + "LAST " + dShort(r.last) : ""}</span></td>
-          <td class="hide-sm mute" style="font-size:13px">${esc(r.c.rate) || "—"}</td>
+        <thead><tr><th>CLIENT</th><th class="hide-sm">DEAL</th><th class="n">${mon(sel)}</th><th class="n">ALL TIME</th></tr></thead>
+        <tbody>${clientRows.filter(r => !r.c.hide).map(r => `<tr>
+          <td><b>${esc(r.c.name)}</b>${r.c.status !== "active" ? `<span class="tag mute">${esc(r.c.status)}</span>` : ""}</td>
+          <td class="hide-sm mute small">${esc(r.c.rate) || "—"}</td>
           <td class="n num">${r.month ? money(r.month) : "<span class='mute'>—</span>"}</td>
-          <td class="n num hide-sm ${r.owed ? "due" : "mute"}">${r.owed ? money(r.owed) : "—"}</td>
           <td class="n num">${money(r.all)}</td></tr>`).join("")}</tbody>
       </table>
 
       <div class="cols">
         <div>
           ${V ? `<h2>VINCERE RETAINER:</h2>
-          <p>CYCLE ${esc(V.id.replace("C", ""))} · ${dShort(V.start)} – ${dShort(V.end)}</p>
           <div class="meter" style="--n:${V.included}">${Array.from({ length: V.included }, (_, i) => `<span class="${i < V.used ? "on" : ""}"></span>`).join("")}</div>
-          <p class="num">${V.used}/${V.included} ADS USED · ${Math.max(0, V.included - V.used)} LEFT · ${Math.max(0, days(t, V.end))} DAYS LEFT</p>
-          <p class="mute" style="margin-top:8px;font-size:13px">IN PROGRESS: ${V.open.length ? V.open.map(esc).join(" · ") : "NONE"}</p>` : ""}
+          <p class="num"><b>${V.used}/${V.included}</b> USED <span class="mute">· ${V.open.length} IN WORK · ${Math.max(0, days(t, V.end))} DAYS LEFT</span></p>` : ""}
         </div>
         <div>
           <h2>PIPELINE:</h2>
-          <ul class="rows">${D.pipeline.map(p => `<li style="grid-template-columns:1fr auto">
-            <span><b>${esc(p.client)}</b><span class="sub">${esc(p.what)} · ${esc(p.stage)}</span></span>
+          <ul class="rows two">${D.pipeline.map(p => `<li>
+            <span><b>${esc(p.client)}</b><span class="sub">${esc(p.stage)}</span></span>
             <span class="r num">${p.value ? money(p.value) + (p.per ? "/" + esc(p.per).slice(0, 2).toUpperCase() : "") : ""}</span></li>`).join("")}</ul>
         </div>
       </div>
 
-      <h2>DELIVERED IN ${monthName(sel)}:</h2>
-      <ul class="rows">${log.length ? log.map(w => `<li><span class="mute">${dShort(w.date)}</span>
-        <span>${esc(M.name(w.client))}<span class="sub">${esc(w.item)}</span></span>
-        <span class="r num ${w.amount ? "" : "mute"}">${w.amount ? money(w.amount) : "INCL."}</span></li>`).join("")
-        : `<li><span class="mute">—</span><span class="mute">NOTHING LOGGED IN BILLING/${sel}.MD</span><span></span></li>`}</ul>
+      <details>
+        <summary><h2>DELIVERED IN ${mon(sel)} (${log.length})</h2></summary>
+        <ul class="rows two">${log.length ? log.map(w => `<li>
+          <span>${esc(short(w.item))}<span class="sub">${esc(M.name(w.client))} · ${dShort(w.date)}</span></span>
+          <span class="r num ${w.amount ? "" : "mute"}">${w.amount ? money(w.amount) : "INCL."}</span></li>`).join("")
+          : `<li><span class="mute">NOTHING LOGGED</span><span></span></li>`}</ul>
+      </details>
 
-      <h2>INVOICES:</h2>
-      <ul class="rows">${M.inv.map(i => `<li><span class="mute">${dShort(i.sale)} ${i.sale.slice(0, 4)}</span>
-        <span>${esc(M.name(i.client))} <span class="mute">· ${esc(i.no)}</span></span>
-        <span class="r num">${money(i.amount)} ${i.open ? `<span class="due">UNPAID</span>` : `<span class="ok">PAID</span>`}</span></li>`).join("")}</ul>
+      <details>
+        <summary><h2>ALL INVOICES (${M.inv.length})</h2></summary>
+        <ul class="rows two">${M.inv.map(i => `<li>
+          <span>${esc(M.name(i.client))}<span class="sub">${dShort(i.sale)} ${i.sale.slice(0, 4)} · ${esc(i.no)}</span></span>
+          <span class="r num">${money(i.amount)}<span class="sub ${i.open ? "due" : "ok"}">${i.open ? "UNPAID" : "PAID"}</span></span></li>`).join("")}</ul>
+      </details>
     `;
     $("#prev").onclick = () => { sel = addMonth(sel, -1); render(); };
     $("#next").onclick = () => { sel = addMonth(sel, 1); render(); };
